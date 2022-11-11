@@ -2,9 +2,8 @@ import sqlite3
 import re
 import requests
 from tkinter import *
-from tkinter import ttk
 
-from config import source_language, target_language, subtitle_file, authorization_key
+from config import frequent_words_file, source_language, target_language, subtitle_file, authorization_key
 
 con = sqlite3.connect('dictionary.db')
 cur = con.cursor()
@@ -32,6 +31,20 @@ wordlist: set = None
 file_read = None
 translate_dict = None
 translate_wordlist = None
+
+def generate_frequent_words_database():
+    con_f = sqlite3.connect('frequent-words.db')
+    cur_f = con_f.cursor()
+    cur_f.execute('CREATE TABLE frequent_words(freq integer NOT NULL UNIQUE, word text NOT NULL, PRIMARY KEY("freq"))')
+    with open(frequent_words_file) as fwf:
+        line = fwf.readline().strip()
+        i = 1
+        while line != '':
+            cur_f.execute('INSERT into frequent_words VALUES (?, ?)', (i, line))
+            i += 1
+            line = fwf.readline().strip()
+    con_f.commit()
+
 
 def translate():
     global file_read
@@ -80,6 +93,7 @@ def translate():
     for w in sorted(list(wordlist)):
         listbox.insert(END, f'{w} ({translate_dict[w]})')
 
+
 def save_words():
     global file_read
     global translate_dict
@@ -89,6 +103,7 @@ def save_words():
 
     cur.executemany(f'INSERT into unknown_words VALUES (?, ?)', zip(translate_wordlist, translated_words))
     con.commit()
+
 
 def set_as_known():
     global wordlist
@@ -101,6 +116,7 @@ def set_as_known():
         wordlist.remove(w)
         listbox.delete(i)
     con.commit()
+
 
 def save_file():
     global file_read
@@ -116,9 +132,11 @@ def save_file():
     f.write(copy_file)
     f.close()
 
+
 def close():
     con.close()
     window.destroy()
+
 
 translate()
 save_words()
