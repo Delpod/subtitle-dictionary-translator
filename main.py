@@ -73,8 +73,16 @@ def translate():
 
     with open(subtitle_file) as sub_file:
         file_read = sub_file.read()
-        wordlist = set([re.sub(r'[\d\W]+$', '', re.sub(r'^[\d\W]+', '', w)).lower() for w in file_read.split()])
-        wordlist.remove('')
+        file_read_cpy = re.sub(r'[^a-zA-Z\'\-]+', ' ', file_read).lower()
+        wordlist = set([w for w in file_read_cpy.split()])
+
+    remove_list = []
+    for w in wordlist:
+        if re.sub(r'[a-z]', '', w) == w:
+            remove_list.append(w)
+    
+    for w in remove_list:
+        wordlist.remove(w)
 
     cur.execute(f'SELECT word from known_words')
     known_words = cur.fetchall()
@@ -104,18 +112,23 @@ def translate():
     translate_wordlist = [w for w in wordlist if w not in unknown_words_words]
 
     if len(translate_wordlist) > 0:
-        translate_wordlist_joined = '. '.join(translate_wordlist)
+        translate_wordlist_joined = '\n'.join(translate_wordlist)
 
         headers = {'Authorization': authorization_key}
-        params = {'text': translate_wordlist_joined, 'source_lang': source_language, 'target_lang': target_language }
-        r = requests.post('https://api-free.deepl.com/v2/translate', headers=headers, params=params)
+        data = {'text': translate_wordlist_joined, 'source_lang': source_language, 'target_lang': target_language, 'preserve_formatting': '1' }
+        r = requests.post('https://api-free.deepl.com/v2/translate', headers=headers, data=data)
+
+        if (r.status_code != 200):
+            print(r.status_code)
 
         values = r.json()
         translated_words: str = values.get('translations')[0].get('text')
-        translated_words = translated_words.rstrip('.').split('. ')
-        
+        translated_words = translated_words.split('\n')
+        translated_words = [w.strip() for w in translated_words]
+
         for i, w in enumerate(translate_wordlist):
             translate_dict[w] = translated_words[i]
+
 
     listbox.delete(0, listbox.size())
     for w in sorted(list(wordlist)):
