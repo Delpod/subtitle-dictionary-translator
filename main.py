@@ -3,7 +3,7 @@ import re
 import requests
 from tkinter import *
 
-from config import frequent_words_file, source_language, target_language, subtitles_file, authorization_key
+from config import frequent_words_file, source_language, target_language, subtitles_file, authorization_key, first_run
 
 con = sqlite3.connect('dictionary.db')
 cur = con.cursor()
@@ -204,6 +204,9 @@ btn2 = Button(window, text="Export words to csv", command=export_csv)
 btn2.pack(padx=10, pady=10, expand=NO, fill=X)
 btn3 = Button(window, text="Quit", command=close)
 btn3.pack(padx=10, pady=10, expand=NO, fill=X)
+
+if first_run:
+    generate_frequent_words_database()
 
 translate_and_save()
 
