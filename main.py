@@ -3,7 +3,7 @@ import re
 import requests
 from tkinter import *
 
-from config import frequent_words_file, source_language, target_language, subtitle_file, authorization_key
+from config import frequent_words_file, source_language, target_language, subtitles_file, authorization_key
 
 con = sqlite3.connect('dictionary.db')
 cur = con.cursor()
@@ -71,7 +71,7 @@ def translate():
     global translate_dict
     global translate_wordlist
 
-    with open(subtitle_file) as sub_file:
+    with open(subtitles_file) as sub_file:
         file_read = sub_file.read()
         file_read_cpy = re.sub(r'[^a-zA-Z\'\-]+', ' ', file_read).lower()
         wordlist = set([w for w in file_read_cpy.split()])
@@ -129,10 +129,12 @@ def translate():
         for i, w in enumerate(translate_wordlist):
             translate_dict[w] = translated_words[i]
 
-
     listbox.delete(0, listbox.size())
     for w in sorted(list(wordlist)):
-        listbox.insert(END, f'{w} ({translate_dict[w]})')
+        if w == translate_dict[w]:
+            cur.execute(f'INSERT into known_words VALUES (?, ?)', (w, translate_dict[w]))
+        else:
+            listbox.insert(END, f'{w} ({translate_dict[w]})')
 
 
 def save_words():
@@ -163,14 +165,22 @@ def save_file():
     global file_read
     global wordlist
     global translate_dict
-    global subtitle_file
+    global subtitles_file
 
     copy_file = file_read
     for i, w in enumerate(wordlist):
         copy_file = re.sub(re.compile('(?<=[^a-zA-Z])' + w + '(?=[^a-zA-Z])'), f'{w} <font color="#ffff99">({translate_dict[w]})</font>', copy_file)
 
-    f = open(f'translated_{subtitle_file}', 'w')
+    f = open(f'translated_{subtitles_file}', 'w')
     f.write(copy_file)
+    f.close()
+
+
+def export_csv():
+    f = open(f'{subtitles_file}.csv', 'w')
+    f.write('word,translation\n')
+    for i, w in enumerate(sorted(wordlist)):
+        f.write(f'{w},{translate_dict[w]}\n')
     f.close()
 
 
@@ -189,6 +199,8 @@ btn0.config(command=translate_and_save)
 btn1 = Button(window, text="Set as known", command=set_as_known)
 btn1.pack(padx=10, pady=10, expand=NO, fill=X)
 btn2 = Button(window, text="Save file", command=save_file)
+btn2.pack(padx=10, pady=10, expand=NO, fill=X)
+btn2 = Button(window, text="Export words to csv", command=export_csv)
 btn2.pack(padx=10, pady=10, expand=NO, fill=X)
 btn3 = Button(window, text="Quit", command=close)
 btn3.pack(padx=10, pady=10, expand=NO, fill=X)
